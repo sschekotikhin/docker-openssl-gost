@@ -2,13 +2,13 @@ FROM debian:bullseye-slim
 
 ARG NGINX_VERSION="1.29.0"
 ARG NGINX_SHA256="109754dfe8e5169a7a0cf0db6718e7da2db495753308f933f161e525a579a664"
-ARG OPENSSL_VERSION="openssl-3.5.1"
+ARG OPENSSL_VERSION="3.5.1"
 ARG OPENSSL_SHA256="9a1472b5e2a019f69da7527f381b873e3287348f3ad91783f83fff4e091ea4a8"
 ARG CURL_VERSION="8.15.0"
 ARG CURL_SHA256="d85cfc79dc505ff800cb1d321a320183035011fa08cb301356425d86be8fc53c"
 ARG ENGINES_VERSION="3"
-ENV OPENSSL_DIR="/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl"
-ENV OPENSSL_CONF="/etc/ssl/openssl.cnf"
+ARG OPENSSL_DIR="/usr/local/src/openssl-openssl-${OPENSSL_VERSION}/.openssl"
+ARG OPENSSL_CONF="/etc/ssl/openssl.cnf"
 
 EXPOSE 80
 
@@ -23,9 +23,9 @@ RUN set -eux \
   && wget "http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz" -O "nginx-${NGINX_VERSION}.tar.gz" \
   && echo "${NGINX_SHA256}" "nginx-${NGINX_VERSION}.tar.gz" | sha256sum -c - \
   && tar -zxvf "nginx-${NGINX_VERSION}.tar.gz" \
-  && wget "https://github.com/openssl/openssl/archive/${OPENSSL_VERSION}.zip" -O "${OPENSSL_VERSION}.zip" \
-  && echo "${OPENSSL_SHA256}" "${OPENSSL_VERSION}.zip" | sha256sum -c - \
-  && unzip "${OPENSSL_VERSION}.zip" -d ./ \
+  && wget "https://github.com/openssl/openssl/archive/openssl-${OPENSSL_VERSION}.zip" -O "openssl-${OPENSSL_VERSION}.zip" \
+  && echo "${OPENSSL_SHA256}" "openssl-${OPENSSL_VERSION}.zip" | sha256sum -c - \
+  && unzip "openssl-${OPENSSL_VERSION}.zip" -d ./ \
   \
   && cd "nginx-${NGINX_VERSION}" \
   && sed -i 's|--prefix=$ngx_prefix no-shared|--prefix=$ngx_prefix|' auto/lib/openssl/make \
@@ -68,11 +68,11 @@ RUN set -eux \
     --with-stream_realip_module \
     --with-stream_ssl_module \
     --with-stream_ssl_preread_module \
-    --with-openssl="/usr/local/src/openssl-${OPENSSL_VERSION}" \
+    --with-openssl="/usr/local/src/openssl-openssl-${OPENSSL_VERSION}" \
   && make -j$(nproc) \
   && make install \
-  && echo "/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl/lib" >> /etc/ld.so.conf.d/ssl.conf && ldconfig \
-  && cp "/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl/bin/openssl" /usr/bin/openssl \
+  && echo "/usr/local/src/openssl-openssl-${OPENSSL_VERSION}/.openssl/lib" >> /etc/ld.so.conf.d/ssl.conf && ldconfig \
+  && cp "/usr/local/src/openssl-openssl-${OPENSSL_VERSION}/.openssl/bin/openssl" /usr/bin/openssl \
   && mkdir -p /var/cache/nginx/ \
   \
   cd /usr/local/src \
@@ -126,5 +126,3 @@ RUN set -eux \
   && make install \
   && ln -s /usr/local/curl/bin/curl /usr/bin/curl \
   && rm -rf "/usr/local/src/curl-${CURL_VERSION}.tar.gz" "/usr/local/src/curl-${CURL_VERSION}" 
-
-CMD ["nginx", "-g", "daemon off;"]
