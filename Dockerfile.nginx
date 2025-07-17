@@ -1,0 +1,130 @@
+FROM debian:bullseye-slim
+
+ARG NGINX_VERSION="1.29.0"
+ARG NGINX_SHA256="109754dfe8e5169a7a0cf0db6718e7da2db495753308f933f161e525a579a664"
+ARG OPENSSL_VERSION="openssl-3.5.1"
+ARG OPENSSL_SHA256="9a1472b5e2a019f69da7527f381b873e3287348f3ad91783f83fff4e091ea4a8"
+ARG CURL_VERSION="8.15.0"
+ARG CURL_SHA256="d85cfc79dc505ff800cb1d321a320183035011fa08cb301356425d86be8fc53c"
+ARG ENGINES_VERSION="3"
+ENV OPENSSL_DIR="/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl"
+ENV OPENSSL_CONF="/etc/ssl/openssl.cnf"
+
+EXPOSE 80
+
+RUN set -eux \
+  \
+  && apt-get update \
+  && apt-get install wget build-essential libpcre++-dev libz-dev ca-certificates unzip cmake git --no-install-recommends -y \
+  \
+  && mkdir -p /usr/local/src \
+  \
+  && cd /usr/local/src \
+  && wget "http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz" -O "nginx-${NGINX_VERSION}.tar.gz" \
+  && echo "${NGINX_SHA256}" "nginx-${NGINX_VERSION}.tar.gz" | sha256sum -c - \
+  && tar -zxvf "nginx-${NGINX_VERSION}.tar.gz" \
+  && wget "https://github.com/openssl/openssl/archive/${OPENSSL_VERSION}.zip" -O "${OPENSSL_VERSION}.zip" \
+  && echo "${OPENSSL_SHA256}" "${OPENSSL_VERSION}.zip" | sha256sum -c - \
+  && unzip "${OPENSSL_VERSION}.zip" -d ./ \
+  \
+  && cd "nginx-${NGINX_VERSION}" \
+  && sed -i 's|--prefix=$ngx_prefix no-shared|--prefix=$ngx_prefix|' auto/lib/openssl/make \
+  && ./configure \
+    --prefix=/etc/nginx \
+    --sbin-path=/usr/sbin/nginx \
+    --modules-path=/usr/lib/nginx/modules \
+    --conf-path=/etc/nginx/nginx.conf \
+    --error-log-path=/var/log/nginx/error.log \
+    --http-log-path=/var/log/nginx/access.log \
+    --pid-path=/var/run/nginx.pid \
+    --lock-path=/var/run/nginx.lock \
+    --http-client-body-temp-path=/var/cache/nginx/client_temp \
+    --http-proxy-temp-path=/var/cache/nginx/proxy_temp \
+    --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \
+    --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
+    --http-scgi-temp-path=/var/cache/nginx/scgi_temp \
+    --user=www-data \
+    --group=www-data \
+    --with-compat \
+    --with-threads \
+    --with-http_addition_module \
+    --with-http_auth_request_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_mp4_module \
+    --with-http_random_index_module \
+    --with-http_realip_module \
+    --with-http_secure_link_module \
+    --with-http_slice_module \
+    --with-http_ssl_module \
+    --with-http_stub_status_module \
+    --with-http_sub_module \
+    --with-http_v2_module \
+    --with-mail \
+    --with-mail_ssl_module \
+    --with-stream \
+    --with-stream_realip_module \
+    --with-stream_ssl_module \
+    --with-stream_ssl_preread_module \
+    --with-openssl="/usr/local/src/openssl-${OPENSSL_VERSION}" \
+  && make -j$(nproc) \
+  && make install \
+  && echo "/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl/lib" >> /etc/ld.so.conf.d/ssl.conf && ldconfig \
+  && cp "/usr/local/src/openssl-${OPENSSL_VERSION}/.openssl/bin/openssl" /usr/bin/openssl \
+  && mkdir -p /var/cache/nginx/ \
+  \
+  cd /usr/local/src \
+  && git clone https://github.com/gost-engine/engine \ 
+  && cd engine \
+  && git submodule update --init \
+  && mkdir build \
+  && cd build \
+  && cmake -DCMAKE_BUILD_TYPE=Release \
+    -DOPENSSL_ROOT_DIR="${OPENSSL_DIR}" \
+    -DOPENSSL_INCLUDE_DIR="${OPENSSL_DIR}/include" \
+    -DOPENSSL_LIBRARIES="${OPENSSL_DIR}/lib" .. \
+    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" \
+  && cmake --build . --config Release \
+  && cmake --build . --target install --config Release \
+  && cp ./bin/gost.so "${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" \
+  && export OPENSSL_ARCH=$(if [ "${TARGETARCH}" = "arm64" ]; then echo "aarch64"; else echo "x86_64"; fi) \
+  && cp -r "${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" "/usr/lib/${OPENSSL_ARCH}-linux-gnu/" \
+  && rm -rf /usr/local/src/engine \
+  \
+  && sed -i 's|openssl_conf =|# openssl_conf =|' "${OPENSSL_CONF}" \
+  && sed -i '6i openssl_conf=openssl_def' "${OPENSSL_CONF}" \
+  && echo "" >> "${OPENSSL_CONF}" \
+  && echo "# OpenSSL default section" >> "${OPENSSL_CONF}" \
+  && echo "[openssl_def]" >> "${OPENSSL_CONF}" \
+  && echo "engines = engine_section" >> "${OPENSSL_CONF}" \
+  && echo "" >> "${OPENSSL_CONF}" \
+  && echo "# Engine section" >> "${OPENSSL_CONF}" \
+  && echo "[engine_section]" >> "${OPENSSL_CONF}" \
+  && echo "gost = gost_section" >> "${OPENSSL_CONF}" \
+  && echo "" >> "${OPENSSL_CONF}" \
+  && echo "# Engine gost section" >> "${OPENSSL_CONF}" \
+  && echo "[gost_section]" >> "${OPENSSL_CONF}" \
+  && echo "engine_id = gost" >> "${OPENSSL_CONF}" \
+  && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}/gost.so" >> "${OPENSSL_CONF}" \
+  && echo "default_algorithms = ALL" >> "${OPENSSL_CONF}" \
+  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_CONF}" \
+  \
+  && apt-get remove curl -y \
+  && rm -rf /usr/local/include/curl \
+  && cd /usr/local/src \
+  && wget "https://curl.haxx.se/download/curl-${CURL_VERSION}.tar.gz" -O "curl-${CURL_VERSION}.tar.gz" \
+  && echo "${CURL_SHA256}" "curl-${CURL_VERSION}.tar.gz" | sha256sum -c - \
+  && tar -zxvf "curl-${CURL_VERSION}.tar.gz" \
+  && cd "curl-${CURL_VERSION}" \
+  && CPPFLAGS="-I${OPENSSL_DIR}/include" \
+    LDFLAGS="-L${OPENSSL_DIR}/lib -Wl,-rpath,${OPENSSL_DIR}/lib" \
+    LD_LIBRARY_PATH=${OPENSSL_DIR}/lib \
+    ./configure --prefix=/usr/local/curl --with-ssl=${OPENSSL_DIR} --without-libpsl \
+  && make -j$(nproc) \
+  && make install \
+  && ln -s /usr/local/curl/bin/curl /usr/bin/curl \
+  && rm -rf "/usr/local/src/curl-${CURL_VERSION}.tar.gz" "/usr/local/src/curl-${CURL_VERSION}" 
+
+CMD ["nginx", "-g", "daemon off;"]
