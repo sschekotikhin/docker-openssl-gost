@@ -2,7 +2,6 @@ FROM debian:bullseye-slim
 
 ARG OPENSSL_VERSION="3.5.1"
 ARG OPENSSL_SHA256="9a1472b5e2a019f69da7527f381b873e3287348f3ad91783f83fff4e091ea4a8"
-ARG ENGINES_VERSION="3"
 ARG OPENSSL_DIR="/usr/local/ssl"
 
 RUN set -eux \
@@ -18,13 +17,12 @@ RUN set -eux \
   && unzip "openssl-${OPENSSL_VERSION}.zip" -d ./ \
   \
   && cd "openssl-openssl-${OPENSSL_VERSION}" \
-  && ./config shared -d --prefix=${OPENSSL_DIR} --openssldir=${OPENSSL_DIR} \
+  && ./config shared -d --prefix=${OPENSSL_DIR} --openssldir=${OPENSSL_DIR} --libdir=lib \
   && make -j$(nproc) all \
   && make install \
   && mv /usr/bin/openssl /root/ \
   && ln -s ${OPENSSL_DIR}/bin/openssl /usr/bin/openssl \
-  && export OPENSSL_LIB=$(if [ "${TARGETARCH}" = "arm64" ]; then echo "lib"; else echo "lib64"; fi) \
-  && echo "${OPENSSL_DIR}/${OPENSSL_LIB}" >> /etc/ld.so.conf.d/ssl.conf \
+  && echo "${OPENSSL_DIR}/lib" >> /etc/ld.so.conf.d/ssl.conf \
   && ldconfig \
   \
   && cd /usr/local/src \
@@ -35,9 +33,8 @@ RUN set -eux \
   && cd build \
   && cmake -DCMAKE_BUILD_TYPE=Release \
     -DOPENSSL_ROOT_DIR="${OPENSSL_DIR}" \
-    -DOPENSSL_LIBRARIES="${OPENSSL_DIR}/${OPENSSL_LIB}" .. \
-    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/${OPENSSL_LIB}/engines-${ENGINES_VERSION}" \
-    -DOPENSSL_CRYPTO_LIBRARY="${OPENSSL_DIR}/${OPENSSL_LIB}" \
+    -DOPENSSL_LIBRARIES="${OPENSSL_DIR}/lib" .. \
+    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/lib/engines-3" \
   && cmake --build . --config Release \
   && cmake --build . --target install --config Release \
   && rm -rf /usr/local/src/engine \
@@ -56,6 +53,6 @@ RUN set -eux \
   && echo "# Engine gost section" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "[gost_section]" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "engine_id = gost" >> "${OPENSSL_DIR}/openssl.cnf" \
-  && echo "dynamic_path = ${OPENSSL_DIR}/${OPENSSL_LIB}/engines-${ENGINES_VERSION}/gost.so" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-3/gost.so" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "default_algorithms = ALL" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_DIR}/openssl.cnf"

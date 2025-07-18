@@ -6,11 +6,8 @@ ARG OPENSSL_VERSION="3.5.1"
 ARG OPENSSL_SHA256="9a1472b5e2a019f69da7527f381b873e3287348f3ad91783f83fff4e091ea4a8"
 ARG CURL_VERSION="8.15.0"
 ARG CURL_SHA256="d85cfc79dc505ff800cb1d321a320183035011fa08cb301356425d86be8fc53c"
-ARG ENGINES_VERSION="3"
 ARG OPENSSL_DIR="/usr/local/src/openssl-openssl-${OPENSSL_VERSION}/.openssl"
 ARG OPENSSL_CONF="/etc/ssl/openssl.cnf"
-
-EXPOSE 80
 
 RUN set -eux \
   \
@@ -69,6 +66,7 @@ RUN set -eux \
     --with-stream_ssl_module \
     --with-stream_ssl_preread_module \
     --with-openssl="/usr/local/src/openssl-openssl-${OPENSSL_VERSION}" \
+    --with-openssl-opt="--libdir=lib" \
   && make -j$(nproc) \
   && make install \
   && echo "/usr/local/src/openssl-openssl-${OPENSSL_VERSION}/.openssl/lib" >> /etc/ld.so.conf.d/ssl.conf && ldconfig \
@@ -85,12 +83,12 @@ RUN set -eux \
     -DOPENSSL_ROOT_DIR="${OPENSSL_DIR}" \
     -DOPENSSL_INCLUDE_DIR="${OPENSSL_DIR}/include" \
     -DOPENSSL_LIBRARIES="${OPENSSL_DIR}/lib" .. \
-    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" \
+    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/lib/engines-3" \
   && cmake --build . --config Release \
   && cmake --build . --target install --config Release \
-  && cp ./bin/gost.so "${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" \
+  && cp ./bin/gost.so "${OPENSSL_DIR}/lib/engines-3" \
   && export OPENSSL_ARCH=$(if [ "${TARGETARCH}" = "arm64" ]; then echo "aarch64"; else echo "x86_64"; fi) \
-  && cp -r "${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}" "/usr/lib/${OPENSSL_ARCH}-linux-gnu/" \
+  && cp -r "${OPENSSL_DIR}/lib/engines-3" "/usr/lib/${OPENSSL_ARCH}-linux-gnu/" \
   && rm -rf /usr/local/src/engine \
   \
   && sed -i 's|openssl_conf =|# openssl_conf =|' "${OPENSSL_CONF}" \
@@ -107,7 +105,7 @@ RUN set -eux \
   && echo "# Engine gost section" >> "${OPENSSL_CONF}" \
   && echo "[gost_section]" >> "${OPENSSL_CONF}" \
   && echo "engine_id = gost" >> "${OPENSSL_CONF}" \
-  && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-${ENGINES_VERSION}/gost.so" >> "${OPENSSL_CONF}" \
+  && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-3/gost.so" >> "${OPENSSL_CONF}" \
   && echo "default_algorithms = ALL" >> "${OPENSSL_CONF}" \
   && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_CONF}" \
   \
