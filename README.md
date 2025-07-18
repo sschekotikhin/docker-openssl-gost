@@ -13,7 +13,7 @@ GOST2012-GOST8912-GOST8912
 GOST2001-GOST89-GOST89
 ```
 
-All images build with [OpenSSL GOST engine](https://github.com/gost-engine/engine). If you want to build your image, just check [the official instructure](https://github.com/gost-engine/engine/blob/master/INSTALL.md).
+All images built with [OpenSSL GOST engine](https://github.com/gost-engine/engine). If you want to build your image, just check [the official instructure](https://github.com/gost-engine/engine/blob/master/INSTALL.md).
 
 ## Docker images
 
