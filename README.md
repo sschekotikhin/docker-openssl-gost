@@ -42,7 +42,7 @@ docker run --rm seshhekotikhin/openssl-gost:latest openssl s_client -connect alp
 
 To generate private key and certificate:
 ```bash
-docker run --volume $(pwd):/certs --rm -i seshhekotikhin/openssl-gost:latest openssl req -x509 -newkey gost2001 -pkeyopt paramset:A -nodes -keyout /certs/key.pem -out certs/cert.pem
+docker run --volume $(pwd):/certs --rm -i seshhekotikhin/openssl-gost:latest openssl req -x509 -newkey gost2001 -pkeyopt paramset:A -nodes -keyout /certs/key.pem -out /certs/cert.pem
 ```
 
 To get info from certificate:
