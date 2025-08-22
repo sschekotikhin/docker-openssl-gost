@@ -14,10 +14,11 @@ RUN set -eux \
   && echo "$OPENVPN_SHA256" "openvpn-${OPENVPN_VERSION}.tar.gz" | sha256sum -c - \
   && tar -zxvf "openvpn-${OPENVPN_VERSION}.tar.gz" \
   && cd "openvpn-${OPENVPN_VERSION}" \
-  && OPENSSL_CFLAGS="-I${OPENSSL_DIR}/include" \
+  && CFLAGS="-DALLOW_NON_CBC_CIPHERS" \
+    OPENSSL_CFLAGS="-I${OPENSSL_DIR}/include" \
     OPENSSL_LIBS="-L${OPENSSL_DIR}/lib -lssl -lcrypto" \
     LD_LIBRARY_PATH=${OPENSSL_DIR}/lib \
-   ./configure --prefix=/usr/local --with-crypto-library=openssl --enable-static=no \
+   ./configure --prefix=/usr/local --with-crypto-library=openssl --with-openssl-engine=yes --enable-static=no \
   && make -j$(nproc) \
   && make install \
   && rm -rf "/usr/local/src/openvpn-${OPENVPN_VERSION}.tar.gz" "/usr/local/src/openvpn-${OPENVPN_VERSION}"
