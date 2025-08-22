@@ -11,4 +11,4 @@ docker push seshhekotikhin/openssl-gost:latest
 docker push seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-curl-${CURL_VERSION}
 docker push seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-stunnel-${STUNNEL_VERSION}
 docker push seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-nginx-${NGINX_VERSION}
-docker push seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-openvpn-${OPENVPN_VERSION}
+docker push seshhekotikhin/openssl-gost:1.1.1-openvpn-${OPENVPN_VERSION}

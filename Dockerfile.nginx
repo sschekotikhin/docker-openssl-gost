@@ -97,6 +97,7 @@ RUN set -eux \
   && echo "# OpenSSL default section" >> "${OPENSSL_CONF}" \
   && echo "[openssl_def]" >> "${OPENSSL_CONF}" \
   && echo "engines = engine_section" >> "${OPENSSL_CONF}" \
+  && echo "providers = providers_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "" >> "${OPENSSL_CONF}" \
   && echo "# Engine section" >> "${OPENSSL_CONF}" \
   && echo "[engine_section]" >> "${OPENSSL_CONF}" \
@@ -107,7 +108,15 @@ RUN set -eux \
   && echo "engine_id = gost" >> "${OPENSSL_CONF}" \
   && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-3/gost.so" >> "${OPENSSL_CONF}" \
   && echo "default_algorithms = ALL" >> "${OPENSSL_CONF}" \
-  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_CONF}" \
+  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "" \
+  && echo "[providers_sect]" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "default = default_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "legacy = legacy_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "" \
+  && echo "[legacy_sect]" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "activate = 1" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && sed -i 's|# activate = 1|activate = 1|' "${OPENSSL_DIR}/openssl.cnf" \
   \
   && apt-get remove curl -y \
   && rm -rf /usr/local/include/curl \

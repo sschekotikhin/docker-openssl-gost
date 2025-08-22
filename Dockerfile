@@ -45,6 +45,7 @@ RUN set -eux \
   && echo "# OpenSSL default section" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "[openssl_def]" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "engines = engine_section" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "providers = providers_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "# Engine section" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "[engine_section]" >> "${OPENSSL_DIR}/openssl.cnf" \
@@ -55,4 +56,12 @@ RUN set -eux \
   && echo "engine_id = gost" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-3/gost.so" >> "${OPENSSL_DIR}/openssl.cnf" \
   && echo "default_algorithms = ALL" >> "${OPENSSL_DIR}/openssl.cnf" \
-  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_DIR}/openssl.cnf"
+  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "" \
+  && echo "[providers_sect]" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "default = default_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "legacy = legacy_sect" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "" \
+  && echo "[legacy_sect]" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && echo "activate = 1" >> "${OPENSSL_DIR}/openssl.cnf" \
+  && sed -i 's|# activate = 1|activate = 1|' "${OPENSSL_DIR}/openssl.cnf"

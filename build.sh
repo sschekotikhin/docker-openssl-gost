@@ -27,4 +27,8 @@ if ! docker run --rm seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-nginx-${NGIN
   exit -1
 fi
 
-docker build --platform linux/arm64,linux/amd64 -f Dockerfile.openvpn -t seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-openvpn-${OPENVPN_VERSION} .
+docker build --platform linux/arm64,linux/amd64 -f Dockerfile.openvpn -t seshhekotikhin/openssl-gost:1.1.1-openvpn-${OPENVPN_VERSION} .
+if ! docker run --rm seshhekotikhin/openssl-gost:1.1.1-openvpn-${OPENVPN_VERSION} openvpn --show-ciphers | grep gost &> /dev/null; then
+  echo 'GOST ciphers not found'
+  exit -1
+fi

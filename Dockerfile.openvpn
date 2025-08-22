@@ -1,13 +1,68 @@
-ARG OPENSSL_VERSION="3.5.1"
-FROM seshhekotikhin/openssl-gost:${OPENSSL_VERSION}
+FROM debian:bullseye-slim
 
+ARG OPENSSL_SHA256="41bac751d85f89a7d821324b7ffb35526a310db014ab6a4fe17fddaa011b7024"
 ARG OPENSSL_DIR="/usr/local/ssl"
 ARG OPENVPN_VERSION="2.6.14"
 ARG OPENVPN_SHA256="9eb6a6618352f9e7b771a9d38ae1631b5edfeed6d40233e243e602ddf2195e7a"
+ARG GOST_ENGINE_VERSION=58a46b289d6b8df06072fc9c0304f4b2d3f4b051
+ARG GOST_ENGINE_SHA256="6b47e24ee1ce619557c039fc0c1201500963f8f8dea83cad6d05d05b3dcc2255"
 
 RUN set -eux \
   \
-  && apt install -y pkg-config libnl-3-dev libnl-genl-3-dev libcap-ng-dev liblz4-dev liblzo2-dev libpam-dev \
+  && apt-get update -y \
+  && apt install -y wget build-essential unzip cmake git ca-certificates --no-install-recommends pkg-config libnl-3-dev libnl-genl-3-dev libcap-ng-dev liblz4-dev liblzo2-dev libpam-dev \
+  \
+  && mkdir -p /usr/local/src \
+  \
+  && cd /usr/local/src \
+  && wget "https://github.com/openssl/openssl/archive/OpenSSL_1_1_1g.zip" -O "openssl-OpenSSL_1_1_1g.zip" \
+  && echo "${OPENSSL_SHA256}" "openssl-OpenSSL_1_1_1g.zip" | sha256sum -c - \
+  && unzip "openssl-OpenSSL_1_1_1g.zip" -d ./ \
+  && cd "openssl-OpenSSL_1_1_1g" \
+  && ./config shared -d --prefix=${OPENSSL_DIR} --openssldir=${OPENSSL_DIR} \
+  && make -j$(nproc) all \
+  && make install \
+  && mv /usr/bin/openssl /root/ \
+  && ln -s ${OPENSSL_DIR}/bin/openssl /usr/bin/openssl \
+  && echo "${OPENSSL_DIR}/lib" >> /etc/ld.so.conf.d/ssl.conf \
+  && ldconfig \
+  \
+  && cd /usr/local/src \
+  && wget "https://github.com/gost-engine/engine/archive/${GOST_ENGINE_VERSION}.zip" -O gost-engine.zip \
+  && echo "$GOST_ENGINE_SHA256" gost-engine.zip | sha256sum -c - \
+  && unzip gost-engine.zip -d ./ \
+  && cd "engine-${GOST_ENGINE_VERSION}" \
+  && sed -i 's|printf("GOST engine already loaded\\n");|goto end;|' gost_eng.c \
+  && mkdir build \
+  && cd build \
+  && cmake -DCMAKE_BUILD_TYPE=Release \
+    -DOPENSSL_ROOT_DIR="${OPENSSL_DIR}" \
+    -DOPENSSL_LIBRARIES="${OPENSSL_DIR}/lib" \
+    -DOPENSSL_ENGINES_DIR="${OPENSSL_DIR}/lib/engines-3" .. \
+  && cmake --build . --config Release \
+  && cmake --build . --target install --config Release \
+  && cd bin \
+  && cp gostsum gost12sum /usr/local/bin \
+  && cd .. \
+  && rm -rf "/usr/local/src/gost-engine.zip" "/usr/local/src/engine-${GOST_ENGINE_VERSION}" \
+  \
+  && sed -i 's|openssl_conf =|# openssl_conf =|' /usr/lib/ssl/openssl.cnf \
+  && sed -i '6i openssl_conf=openssl_def' /usr/lib/ssl/openssl.cnf \
+  && echo "" >> /usr/lib/ssl/openssl.cnf \
+  && echo "# OpenSSL default section" >> /usr/lib/ssl/openssl.cnf \
+  && echo "[openssl_def]" >> /usr/lib/ssl/openssl.cnf \
+  && echo "engines = engine_section" >> /usr/lib/ssl/openssl.cnf \
+  && echo "" >> /usr/lib/ssl/openssl.cnf \
+  && echo "# Engine section" >> /usr/lib/ssl/openssl.cnf \
+  && echo "[engine_section]" >> /usr/lib/ssl/openssl.cnf \
+  && echo "gost = gost_section" >> /usr/lib/ssl/openssl.cnf \
+  && echo "" >> /usr/lib/ssl/openssl.cnf \
+  && echo "# Engine gost section" >> /usr/lib/ssl/openssl.cnf \
+  && echo "[gost_section]" >> /usr/lib/ssl/openssl.cnf \
+  && echo "engine_id = gost" >> /usr/lib/ssl/openssl.cnf \
+  && echo "dynamic_path = ${OPENSSL_DIR}/lib/engines-3/gost.so" >> /usr/lib/ssl/openssl.cnf \
+  && echo "default_algorithms = ALL" >> /usr/lib/ssl/openssl.cnf \
+  && echo "CRYPT_PARAMS = id-Gost28147-89-CryptoPro-A-ParamSet" >> /usr/lib/ssl/openssl.cnf \
   \
   && cd /usr/local/src \
   && wget "https://swupdate.openvpn.org/community/releases/openvpn-${OPENVPN_VERSION}.tar.gz" -O "openvpn-${OPENVPN_VERSION}.tar.gz" \
