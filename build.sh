@@ -4,6 +4,7 @@ OPENSSL_VERSION=3.5.1
 CURL_VERSION=8.15.0
 STUNNEL_VERSION=5.75
 NGINX_VERSION=1.29.0
+OPENVPN_VERSION=2.6.14
 
 docker build --platform linux/arm64,linux/amd64 -f Dockerfile -t seshhekotikhin/openssl-gost:${OPENSSL_VERSION} .
 if ! docker run --rm seshhekotikhin/openssl-gost:${OPENSSL_VERSION} openssl ciphers | grep GOST &> /dev/null; then
@@ -25,3 +26,5 @@ if ! docker run --rm seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-nginx-${NGIN
   echo 'GOST nginx working improperly'
   exit -1
 fi
+
+docker build --platform linux/arm64,linux/amd64 -f Dockerfile.openvpn -t seshhekotikhin/openssl-gost:${OPENSSL_VERSION}-openvpn-${OPENVPN_VERSION} .

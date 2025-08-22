@@ -1,0 +1,23 @@
+ARG OPENSSL_VERSION="3.5.1"
+FROM seshhekotikhin/openssl-gost:${OPENSSL_VERSION}
+
+ARG OPENSSL_DIR="/usr/local/ssl"
+ARG OPENVPN_VERSION="2.6.14"
+ARG OPENVPN_SHA256="9eb6a6618352f9e7b771a9d38ae1631b5edfeed6d40233e243e602ddf2195e7a"
+
+RUN set -eux \
+  \
+  && apt install -y pkg-config libnl-3-dev libnl-genl-3-dev libcap-ng-dev liblz4-dev liblzo2-dev libpam-dev \
+  \
+  && cd /usr/local/src \
+  && wget "https://swupdate.openvpn.org/community/releases/openvpn-${OPENVPN_VERSION}.tar.gz" -O "openvpn-${OPENVPN_VERSION}.tar.gz" \
+  && echo "$OPENVPN_SHA256" "openvpn-${OPENVPN_VERSION}.tar.gz" | sha256sum -c - \
+  && tar -zxvf "openvpn-${OPENVPN_VERSION}.tar.gz" \
+  && cd "openvpn-${OPENVPN_VERSION}" \
+  && OPENSSL_CFLAGS="-I${OPENSSL_DIR}/include" \
+    OPENSSL_LIBS="-L${OPENSSL_DIR}/lib -lssl -lcrypto" \
+    LD_LIBRARY_PATH=${OPENSSL_DIR}/lib \
+   ./configure --prefix=/usr/local --with-crypto-library=openssl --enable-static=no \
+  && make -j$(nproc) \
+  && make install \
+  && rm -rf "/usr/local/src/openvpn-${OPENVPN_VERSION}.tar.gz" "/usr/local/src/openvpn-${OPENVPN_VERSION}"
