@@ -1,6 +1,6 @@
 # Docker images with OpenSSL 3.x, GOST engine, cURL, nginx, stunnel and OpenVPN
 
-This image was built to have ability to connect to servers with GOST SSL certificates; encrypt, decrypt, hash messages with GOST algorithms. It built with fresh versions of OpenSSL (3.5.1), nginx (1.29), cURL (8.15.0), stunnel (5.75) and OpenVPN (2.6.14).
+This image was built to have ability to connect to servers with GOST SSL certificates; encrypt, decrypt, hash messages with GOST algorithms. It built with fresh versions of OpenSSL (3.5.1), nginx (1.31.6), cURL (8.15.0), stunnel (5.75) and OpenVPN (2.6.14).
 
 To verify that OpenSSL contains GOST ciphers, run `docker run --rm seshhekotikhin/openssl-gost:latest openssl ciphers`. You will see next output:
 ```
@@ -31,7 +31,7 @@ There are few images on [dockerhub](https://hub.docker.com/r/seshhekotikhin/open
 - `seshhekotikhin/openssl-gost:latest` or `seshhekotikhin/openssl-gost:3.5.1` - GOST OpenSSL.
 - `seshhekotikhin/openssl-gost:3.5.1-curl-8.15.0` - GOST OpenSSL with cURL.
 - `seshhekotikhin/openssl-gost:3.5.1-stunnel-5.75` - GOST OpenSSL with stunnel.
-- `seshhekotikhin/openssl-gost:3.5.1-nginx-1.29.0` - GOST OpenSSL with nginx and cURL.
+- `seshhekotikhin/openssl-gost:3.5.1-nginx-1.31.6` - GOST OpenSSL with nginx and cURL.
 - `seshhekotikhin/openssl-gost:1.1.1-openvpn-2.6.14` - GOST OpenSSL with OpenVPN.
 
 ## Usage examples
